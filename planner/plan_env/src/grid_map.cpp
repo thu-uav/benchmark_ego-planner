@@ -90,7 +90,7 @@ void GridMap::initMap(ros::NodeHandle &nh)
   md_.proj_points_cnt = 0;
   md_.cam2body_ << 0.0, 0.0, 1.0, 0.0,
       -1.0, 0.0, 0.0, 0.0,
-      0.0, -1.0, 0.0, -0.02,
+      0.0, -1.0, 0.0, 0,
       0.0, 0.0, 0.0, 1.0;
 
   /* init callback */
@@ -982,6 +982,7 @@ void GridMap::getRegion(Eigen::Vector3d &ori, Eigen::Vector3d &size)
 void GridMap::depthOdomCallback(const sensor_msgs::ImageConstPtr &img,
                                 const nav_msgs::OdometryConstPtr &odom)
 {
+  //std::cout<<"depth odom callback in"<<std::endl;
   /* get pose */
   Eigen::Quaterniond body_q = Eigen::Quaterniond(odom->pose.pose.orientation.w,
                                                  odom->pose.pose.orientation.x,
@@ -1000,6 +1001,8 @@ void GridMap::depthOdomCallback(const sensor_msgs::ImageConstPtr &img,
   md_.camera_pos_(1) = cam_T(1, 3);
   md_.camera_pos_(2) = cam_T(2, 3);
   md_.camera_q_ = Eigen::Quaterniond(cam_T.block<3, 3>(0, 0));
+  // std::cout<<"cam pose: "<<md_.camera_pos_(0)<<", "<<md_.camera_pos_(1)<<", "<<md_.camera_pos_(2)<<std::endl;
+  // std::cout<<"cam quat: "<<md_.camera_q_.w()<<", "<<md_.camera_q_.x()<<", "<<md_.camera_q_.y()<<", "<<md_.camera_q_.z()<<std::endl;
 
   /* get depth image */
   cv_bridge::CvImagePtr cv_ptr;
@@ -1008,6 +1011,7 @@ void GridMap::depthOdomCallback(const sensor_msgs::ImageConstPtr &img,
   {
     (cv_ptr->image).convertTo(cv_ptr->image, CV_16UC1, mp_.k_depth_scaling_factor_);
   }
+  //std::cout<<"depth image"<<cv_ptr->image<<std::endl;
   cv_ptr->image.copyTo(md_.depth_image_);
 
   md_.occ_need_update_ = true;

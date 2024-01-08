@@ -2,6 +2,7 @@
 #include "nav_msgs/Odometry.h"
 #include "ego_planner/Bspline.h"
 #include "quadrotor_msgs/PositionCommand.h"
+#include <quadrotor_msgs/TrajectoryPoint.h>
 #include "std_msgs/Empty.h"
 #include "visualization_msgs/Marker.h"
 #include <ros/ros.h>
@@ -226,7 +227,23 @@ void cmdCallback(const ros::TimerEvent &e)
 
   last_yaw_ = cmd.yaw;
 
-  pos_cmd_pub.publish(cmd);
+  quadrotor_msgs::TrajectoryPoint cmd_;
+  cmd_.time_from_start = ros::Duration(0.01);
+  cmd_.pose.position.x = pos(0);
+  cmd_.pose.position.y = pos(1);
+  cmd_.pose.position.z = pos(2);
+  cmd_.pose.orientation.w = 1.0;
+  cmd_.heading = yaw_yawdot.first;
+  cmd_.velocity.angular.z = yaw_yawdot.second;
+  cmd_.velocity.linear.x = vel(0);
+  cmd_.velocity.linear.y = vel(1);
+  cmd_.velocity.linear.z = vel(2);
+  cmd_.acceleration.linear.x = acc(0);
+  cmd_.acceleration.linear.y = acc(1);
+  cmd_.acceleration.linear.z = acc(2);
+
+  //printf("before pub");
+  pos_cmd_pub.publish(cmd_);
 }
 
 int main(int argc, char **argv)
@@ -237,7 +254,7 @@ int main(int argc, char **argv)
 
   ros::Subscriber bspline_sub = node.subscribe("planning/bspline", 10, bsplineCallback);
 
-  pos_cmd_pub = node.advertise<quadrotor_msgs::PositionCommand>("/position_cmd", 50);
+  pos_cmd_pub = node.advertise<quadrotor_msgs::TrajectoryPoint>("/position_cmd", 50);
 
   ros::Timer cmd_timer = node.createTimer(ros::Duration(0.01), cmdCallback);
 

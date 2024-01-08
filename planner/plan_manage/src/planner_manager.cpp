@@ -1,6 +1,7 @@
 // #include <fstream>
 #include <plan_manage/planner_manager.h>
 #include <thread>
+#include <chrono>
 
 namespace ego_planner
 {
@@ -51,15 +52,14 @@ namespace ego_planner
     cout << "start: " << start_pt.transpose() << ", " << start_vel.transpose() << "\ngoal:" << local_target_pt.transpose() << ", " << local_target_vel.transpose()
          << endl;
 
-    if ((start_pt - local_target_pt).norm() < 0.2)
+    if ((start_pt - local_target_pt).norm() < 0.3)
     {
       cout << "Close to goal" << endl;
       continous_failures_count_++;
       return false;
     }
 
-    ros::Time t_start = ros::Time::now();
-    ros::Duration t_init, t_opt, t_refine;
+    auto t_start = std::chrono::system_clock::now();
 
     /*** STEP 1: INIT ***/
     double ts = (start_pt - local_target_pt).norm() > 0.1 ? pp_.ctrl_pt_dist / pp_.max_vel_ * 1.2 : pp_.ctrl_pt_dist / pp_.max_vel_ * 5; // pp_.ctrl_pt_dist / pp_.max_vel_ is too tense, and will surely exceed the acc/vel limits
@@ -214,13 +214,13 @@ namespace ego_planner
     vector<vector<Eigen::Vector3d>> a_star_pathes;
     a_star_pathes = bspline_optimizer_rebound_->initControlPoints(ctrl_pts, true);
 
-    t_init = ros::Time::now() - t_start;
+    auto t_init = std::chrono::system_clock::now() - t_start;
 
     static int vis_id = 0;
     visualization_->displayInitPathList(point_set, 0.2, 0);
     visualization_->displayAStarList(a_star_pathes, vis_id);
 
-    t_start = ros::Time::now();
+    t_start = std::chrono::system_clock::now();
 
     /*** STEP 2: OPTIMIZE ***/
     bool flag_step_1_success = bspline_optimizer_rebound_->BsplineOptimizeTrajRebound(ctrl_pts, ts);
@@ -233,8 +233,8 @@ namespace ego_planner
     }
     //visualization_->displayOptimalList( ctrl_pts, vis_id );
 
-    t_opt = ros::Time::now() - t_start;
-    t_start = ros::Time::now();
+    auto t_opt = std::chrono::system_clock::now() - t_start;
+    t_start = std::chrono::system_clock::now();
 
     /*** STEP 3: REFINE(RE-ALLOCATE TIME) IF NECESSARY ***/
     UniformBspline pos = UniformBspline(ctrl_pts, 3, ts);
@@ -259,12 +259,12 @@ namespace ego_planner
       return false;
     }
 
-    t_refine = ros::Time::now() - t_start;
+    auto t_refine = std::chrono::system_clock::now() - t_start;
 
     // save planned results
     updateTrajInfo(pos, ros::Time::now());
 
-    cout << "total time:\033[42m" << (t_init + t_opt + t_refine).toSec() << "\033[0m,optimize:" << (t_init + t_opt).toSec() << ",refine:" << t_refine.toSec() << endl;
+    cout << "[bench] total time:\033[42m" << std::chrono::duration_cast<std::chrono::nanoseconds>(t_init + t_opt + t_refine).count() / 1e6 << "\033[0m,optimize:" << std::chrono::duration_cast<std::chrono::nanoseconds>(t_init + t_opt).count() / 1e6 << ",refine:" << std::chrono::duration_cast<std::chrono::nanoseconds>(t_refine).count() / 1e6 << endl;
 
     // success. YoY
     continous_failures_count_ = 0;
