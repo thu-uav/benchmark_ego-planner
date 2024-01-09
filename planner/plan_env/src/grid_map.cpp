@@ -129,6 +129,8 @@ void GridMap::initMap(ros::NodeHandle &nh)
 
   unknown_pub_ = node_.advertise<sensor_msgs::PointCloud2>("/grid_map/unknown", 10);
 
+  mapping_time_pub_ = node_.advertise<std_msgs::Float32>("/mapping_time", 10);
+
   md_.occ_need_update_ = false;
   md_.local_updated_ = false;
   md_.has_first_depth_ = false;
@@ -655,32 +657,22 @@ void GridMap::updateOccupancyCallback(const ros::TimerEvent & /*event*/)
   if (!md_.occ_need_update_)
     return;
 
-  /* update occupancy */
-  // ros::Time t1, t2, t3, t4;
-  // t1 = ros::Time::now();
-
+  auto t_start = std::chrono::system_clock::now();
   projectDepthImage();
-  // t2 = ros::Time::now();
   raycastProcess();
-  // t3 = ros::Time::now();
 
   if (md_.local_updated_)
     clearAndInflateLocalMap();
-
-  // t4 = ros::Time::now();
-
-  // cout << setprecision(7);
-  // cout << "t2=" << (t2-t1).toSec() << " t3=" << (t3-t2).toSec() << " t4=" << (t4-t3).toSec() << endl;;
-
-  // md_.fuse_time_ += (t2 - t1).toSec();
-  // md_.max_fuse_time_ = max(md_.max_fuse_time_, (t2 - t1).toSec());
-
-  // if (mp_.show_occ_time_)
-  //   ROS_WARN("Fusion: cur t = %lf, avg t = %lf, max t = %lf", (t2 - t1).toSec(),
-  //            md_.fuse_time_ / md_.update_num_, md_.max_fuse_time_);
+  
+  auto t_map = std::chrono::system_clock::now() - t_start;
 
   md_.occ_need_update_ = false;
   md_.local_updated_ = false;
+
+  std_msgs::Float32 time_msg;
+  time_msg.data = std::chrono::duration_cast<std::chrono::nanoseconds>(t_map).count() / 1e6;
+  mapping_time_pub_.publish(time_msg);
+
 }
 
 void GridMap::depthPoseCallback(const sensor_msgs::ImageConstPtr &img,

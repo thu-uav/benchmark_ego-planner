@@ -10,6 +10,7 @@
 #include <plan_manage/plan_container.hpp>
 #include <ros/ros.h>
 #include <traj_utils/planning_visualization.h>
+#include <std_msgs/Float32.h>
 
 namespace ego_planner
 {
@@ -41,6 +42,8 @@ namespace ego_planner
     LocalTrajData local_data_;
     GlobalTrajData global_data_;
     GridMap::Ptr grid_map_;
+
+    ros::Publisher planning_time_pub_;
 
   private:
     /* main planning algorithms & modules */

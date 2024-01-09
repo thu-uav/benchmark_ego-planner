@@ -8,7 +8,7 @@ namespace ego_planner
 
   // SECTION interfaces for setup and query
 
-  EGOPlannerManager::EGOPlannerManager() {}
+  EGOPlannerManager::EGOPlannerManager() { }
 
   EGOPlannerManager::~EGOPlannerManager() { std::cout << "des manager" << std::endl; }
 
@@ -34,6 +34,7 @@ namespace ego_planner
     bspline_optimizer_rebound_->a_star_->initGridMap(grid_map_, Eigen::Vector3i(100, 100, 100));
 
     visualization_ = vis;
+    planning_time_pub_ = nh.advertise<std_msgs::Float32>("/planning_time", 5);
   }
 
   // !SECTION
@@ -265,6 +266,10 @@ namespace ego_planner
     updateTrajInfo(pos, ros::Time::now());
 
     cout << "[bench] total time:\033[42m" << std::chrono::duration_cast<std::chrono::nanoseconds>(t_init + t_opt + t_refine).count() / 1e6 << "\033[0m,optimize:" << std::chrono::duration_cast<std::chrono::nanoseconds>(t_init + t_opt).count() / 1e6 << ",refine:" << std::chrono::duration_cast<std::chrono::nanoseconds>(t_refine).count() / 1e6 << endl;
+
+    std_msgs::Float32 time_msgs;
+    time_msgs.data = std::chrono::duration_cast<std::chrono::nanoseconds>(t_init + t_opt + t_refine).count() / 1e6;
+    planning_time_pub_.publish(time_msgs);
 
     // success. YoY
     continous_failures_count_ = 0;

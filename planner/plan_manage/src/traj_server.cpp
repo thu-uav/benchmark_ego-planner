@@ -4,10 +4,11 @@
 #include "quadrotor_msgs/PositionCommand.h"
 #include <quadrotor_msgs/TrajectoryPoint.h>
 #include "std_msgs/Empty.h"
+#include "std_msgs/Float32.h"
 #include "visualization_msgs/Marker.h"
 #include <ros/ros.h>
 
-ros::Publisher pos_cmd_pub;
+ros::Publisher pos_cmd_pub, projection_time_pub_;
 
 quadrotor_msgs::PositionCommand cmd;
 double pos_gain[3] = {0, 0, 0};
@@ -170,6 +171,8 @@ void cmdCallback(const ros::TimerEvent &e)
   ros::Time time_now = ros::Time::now();
   double t_cur = (time_now - start_time_).toSec();
 
+  auto t_start = std::chrono::system_clock::now();
+
   Eigen::Vector3d pos(Eigen::Vector3d::Zero()), vel(Eigen::Vector3d::Zero()), acc(Eigen::Vector3d::Zero()), pos_f;
   std::pair<double, double> yaw_yawdot(0, 0);
 
@@ -205,27 +208,29 @@ void cmdCallback(const ros::TimerEvent &e)
   }
   time_last = time_now;
 
-  cmd.header.stamp = time_now;
-  cmd.header.frame_id = "world";
-  cmd.trajectory_flag = quadrotor_msgs::PositionCommand::TRAJECTORY_STATUS_READY;
-  cmd.trajectory_id = traj_id_;
+  // cmd.header.stamp = time_now;
+  // cmd.header.frame_id = "world";
+  // cmd.trajectory_flag = quadrotor_msgs::PositionCommand::TRAJECTORY_STATUS_READY;
+  // cmd.trajectory_id = traj_id_;
 
-  cmd.position.x = pos(0);
-  cmd.position.y = pos(1);
-  cmd.position.z = pos(2);
+  // cmd.position.x = pos(0);
+  // cmd.position.y = pos(1);
+  // cmd.position.z = pos(2);
 
-  cmd.velocity.x = vel(0);
-  cmd.velocity.y = vel(1);
-  cmd.velocity.z = vel(2);
+  // cmd.velocity.x = vel(0);
+  // cmd.velocity.y = vel(1);
+  // cmd.velocity.z = vel(2);
 
-  cmd.acceleration.x = acc(0);
-  cmd.acceleration.y = acc(1);
-  cmd.acceleration.z = acc(2);
+  // cmd.acceleration.x = acc(0);
+  // cmd.acceleration.y = acc(1);
+  // cmd.acceleration.z = acc(2);
 
-  cmd.yaw = yaw_yawdot.first;
-  cmd.yaw_dot = yaw_yawdot.second;
+  // cmd.yaw = yaw_yawdot.first;
+  // cmd.yaw_dot = yaw_yawdot.second;
 
-  last_yaw_ = cmd.yaw;
+  // last_yaw_ = cmd.yaw;
+
+  auto t_projection = std::chrono::system_clock::now()-t_start;
 
   quadrotor_msgs::TrajectoryPoint cmd_;
   cmd_.time_from_start = ros::Duration(0.01);
@@ -244,6 +249,10 @@ void cmdCallback(const ros::TimerEvent &e)
 
   //printf("before pub");
   pos_cmd_pub.publish(cmd_);
+
+  std_msgs::Float32 time_msg;
+  time_msg.data = std::chrono::duration_cast<std::chrono::nanoseconds>(t_projection).count() / 1e6;
+  projection_time_pub_.publish(time_msg);
 }
 
 int main(int argc, char **argv)
@@ -255,6 +264,7 @@ int main(int argc, char **argv)
   ros::Subscriber bspline_sub = node.subscribe("planning/bspline", 10, bsplineCallback);
 
   pos_cmd_pub = node.advertise<quadrotor_msgs::TrajectoryPoint>("/position_cmd", 50);
+  projection_time_pub_ = node.advertise<std_msgs::Float32>("/projection_time", 5);
 
   ros::Timer cmd_timer = node.createTimer(ros::Duration(0.01), cmdCallback);
 
