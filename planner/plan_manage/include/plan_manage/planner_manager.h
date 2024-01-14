@@ -43,7 +43,6 @@ namespace ego_planner
     GlobalTrajData global_data_;
     GridMap::Ptr grid_map_;
 
-    ros::Publisher planning_time_pub_;
 
   private:
     /* main planning algorithms & modules */
@@ -63,6 +62,7 @@ namespace ego_planner
     // !SECTION stable
 
     // SECTION developing
+    ros::Publisher planning_time_pub_;
 
   public:
     typedef unique_ptr<EGOPlannerManager> Ptr;
